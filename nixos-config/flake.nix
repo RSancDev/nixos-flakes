@@ -1,14 +1,13 @@
 {
   description = "Riced NixOS with HyprLand";
-
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     catppuccin.url = "github:catppuccin/nix";
   };
-
-  outputs = { self, nixpkgs, home-manager, catppuccin, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-hardware, home-manager, catppuccin, ... }@inputs:
   let
     system = "x86_64-linux";
     pkgs = import nixpkgs {
@@ -21,13 +20,10 @@
       modules = [
         # Hardware configuration (generate this with nixos-generate-config)
         ./nixos/hardware-configuration.nix
-
         # Main system configuration
         ./nixos/configuration.nix
-
         # Hyprland module
         ./nixosModules/hyprland.nix
-
         # Home Manager
         home-manager.nixosModules.home-manager
         {
@@ -36,6 +32,32 @@
           home-manager.users.rsanchez = import ./homeModules/riced.nix;
           home-manager.extraSpecialArgs = { inherit inputs; };
           home-manager.backupFileExtension = "backup";
+        }
+      ];
+    };
+
+    # Add Surface Go 2 work configuration
+    nixosConfigurations.surface-work = nixpkgs.lib.nixosSystem {
+      inherit system;
+      modules = [
+        # Surface hardware support
+        nixos-hardware.nixosModules.microsoft-surface-go
+        # Hardware configuration (generate this on the Surface)
+        ./nixos/surface-hardware-configuration.nix
+        # Same system configuration
+        ./nixos/configuration.nix
+        # Same Hyprland setup
+        ./nixosModules/hyprland.nix
+        # Same Home Manager setup
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.rsanchez = import ./homeModules/riced.nix;
+          home-manager.extraSpecialArgs = { inherit inputs; };
+          home-manager.backupFileExtension = "backup";
+          # Set hostname for work machine
+          networking.hostName = "surface-work";
         }
       ];
     };
